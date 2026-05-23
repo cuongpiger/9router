@@ -6,6 +6,39 @@ import { getCachedClaudeHeaders } from "../utils/claudeHeaderCache.js";
 import { proxyAwareFetch } from "../utils/proxyFetch.js";
 import { injectReasoningContent } from "../utils/reasoningContentInjector.js";
 
+// Rough token estimate: serialize content to string, divide by 4 chars/token.
+// Conservative for code (which has more tokens per char than prose).
+function estimateTokens(content) {
+  if (!content) return 0;
+  if (typeof content === "string") return Math.ceil(content.length / 4);
+  if (Array.isArray(content)) {
+    return content.reduce((sum, part) => sum + estimateTokens(part.text || part.content || ""), 0);
+  }
+  return 0;
+}
+
+// Trim oldest non-system messages until estimated input fits within maxInputTokens.
+// Always keeps system messages and at least the last message.
+function truncateMessages(messages, maxInputTokens) {
+  const system = messages.filter(m => m.role === "system");
+  const conv = messages.filter(m => m.role !== "system");
+
+  const systemTokens = system.reduce((sum, m) => sum + estimateTokens(m.content), 0);
+  const budget = maxInputTokens - systemTokens - 256; // 256-token safety margin
+
+  // Walk backwards from the end, keep as many messages as fit
+  const kept = [];
+  let used = 0;
+  for (let i = conv.length - 1; i >= 0; i--) {
+    const t = estimateTokens(conv[i].content);
+    if (used + t > budget && kept.length > 0) break;
+    kept.unshift(conv[i]);
+    used += t;
+  }
+
+  return [...system, ...kept];
+}
+
 export class DefaultExecutor extends BaseExecutor {
   constructor(provider) {
     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
@@ -15,6 +48,9 @@ export class DefaultExecutor extends BaseExecutor {
     let result = injectReasoningContent({ provider: this.provider, model, body });
     if (this.config?.maxTokensCap && result.max_tokens > this.config.maxTokensCap) {
       result = { ...result, max_tokens: this.config.maxTokensCap };
+    }
+    if (this.config?.maxInputTokens && Array.isArray(result.messages)) {
+      result = { ...result, messages: truncateMessages(result.messages, this.config.maxInputTokens) };
     }
     return result;
   }

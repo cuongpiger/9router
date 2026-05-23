@@ -177,7 +177,8 @@ export const PROVIDERS = {
     baseUrl: "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1/chat/completions",
     format: "openai",
     headers: {},
-    maxTokensCap: 32768
+    maxTokensCap: 32768,
+    maxInputTokens: 129024
   },
   github: {
     baseUrl: "https://api.githubcopilot.com/chat/completions",

@@ -41,4 +41,10 @@ describe("GreenNode provider config", () => {
       "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1/chat/completions"
     );
   });
+
+  it("resolves alias 'gn' to provider ID 'greennode'", async () => {
+    const { resolveProviderAlias } = await import("open-sse/services/model.js");
+    expect(resolveProviderAlias("gn")).toBe("greennode");
+    expect(resolveProviderAlias("greennode")).toBe("greennode");
+  });
 });

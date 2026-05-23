@@ -420,7 +420,7 @@ export const PROVIDER_MODELS = {
     { id: "@cf/stabilityai/stable-diffusion-xl-base-1.0", name: "SDXL Base 1.0", type: "image", params: ["size"] },
   ],
   greennode: [
-    { id: "qwen/qwen3-vl-235b-a22b-instruct", name: "Qwen3-VL-235B-A22B-Instruct" },
+    { id: "qwen/qwen3-vl-235b-a22b-instruct", name: "Qwen3-VL-235B-A22B-Instruct", contextLength: 129024 },
   ],
   byteplus: [
     { id: "seed-2-0-pro-260328", name: "Seed 2.0 Pro" },

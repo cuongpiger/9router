@@ -325,7 +325,8 @@ export async function POST(request) {
           break;
         }
         case "volcengine-ark":
-        case "byteplus": {
+        case "byteplus":
+        case "greennode": {
           const res = await fetch(PROVIDER_ENDPOINTS[provider], {
             method: "POST",
             headers: {

@@ -47,4 +47,9 @@ describe("GreenNode provider config", () => {
     expect(resolveProviderAlias("gn")).toBe("greennode");
     expect(resolveProviderAlias("greennode")).toBe("greennode");
   });
+
+  it("has maxTokensCap of 32768 in PROVIDERS config", async () => {
+    const { PROVIDERS } = await import("open-sse/config/providers.js");
+    expect(PROVIDERS["greennode"].maxTokensCap).toBe(32768);
+  });
 });

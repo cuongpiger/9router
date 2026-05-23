@@ -12,7 +12,11 @@ export class DefaultExecutor extends BaseExecutor {
   }
 
   transformRequest(model, body) {
-    return injectReasoningContent({ provider: this.provider, model, body });
+    let result = injectReasoningContent({ provider: this.provider, model, body });
+    if (this.config?.maxTokensCap && result.max_tokens > this.config.maxTokensCap) {
+      result = { ...result, max_tokens: this.config.maxTokensCap };
+    }
+    return result;
   }
 
   buildUrl(model, stream, urlIndex = 0, credentials = null) {

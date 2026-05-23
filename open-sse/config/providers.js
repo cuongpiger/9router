@@ -176,7 +176,8 @@ export const PROVIDERS = {
   greennode: {
     baseUrl: "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1/chat/completions",
     format: "openai",
-    headers: {}
+    headers: {},
+    maxTokensCap: 32768
   },
   github: {
     baseUrl: "https://api.githubcopilot.com/chat/completions",

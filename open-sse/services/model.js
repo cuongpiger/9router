@@ -57,6 +57,8 @@ const ALIAS_TO_PROVIDER_ID = {
   "volcengine-ark": "volcengine-ark",
   byteplus: "byteplus",
   bpm: "byteplus",
+  greennode: "greennode",
+  gn: "greennode",
   cursor: "cursor",
   vx: "vertex",
   vertex: "vertex",

@@ -419,6 +419,12 @@ export const PROVIDER_MODELS = {
     { id: "@cf/runwayml/stable-diffusion-v1-5-inpainting", name: "Stable Diffusion v1.5 Inpainting", type: "image", params: ["size"], capabilities: ["edit", "mask"] },
     { id: "@cf/stabilityai/stable-diffusion-xl-base-1.0", name: "SDXL Base 1.0", type: "image", params: ["size"] },
   ],
+  greennode: [
+    { id: "qwen/qwen3-vl-235b-a22b-instruct", name: "Qwen3-VL-235B-A22B-Instruct", contextLength: 129024 },
+    { id: "google/gemma-4-31b-it", name: "gemma-4-31b-it", contextLength: 129024 },
+    { id: "openai/gpt-oss-120b", name: "gpt-oss-120b", contextLength: 129024 },
+    { id: "openai/gpt-5", name: "gpt-5", contextLength: 129024 },
+  ],
   byteplus: [
     { id: "seed-2-0-pro-260328", name: "Seed 2.0 Pro" },
     { id: "seed-2-0-code-preview-260328", name: "Seed 2.0 Code Preview" },

@@ -16,6 +16,7 @@ import { PerplexityWebExecutor } from "./perplexity-web.js";
 import { OllamaLocalExecutor } from "./ollama-local.js";
 import { CommandCodeExecutor } from "./commandcode.js";
 import { DefaultExecutor } from "./default.js";
+import { GreenNodeExecutor } from "./greennode.js";
 
 const executors = {
   antigravity: new AntigravityExecutor(),
@@ -37,6 +38,7 @@ const executors = {
   "perplexity-web": new PerplexityWebExecutor(),
   "ollama-local": new OllamaLocalExecutor(),
   commandcode: new CommandCodeExecutor(),
+  greennode: new GreenNodeExecutor(),
 };
 
 const defaultCache = new Map();
@@ -63,6 +65,7 @@ export { CodexExecutor } from "./codex.js";
 export { CursorExecutor } from "./cursor.js";
 export { VertexExecutor } from "./vertex.js";
 export { DefaultExecutor } from "./default.js";
+export { GreenNodeExecutor } from "./greennode.js";
 export { QwenExecutor } from "./qwen.js";
 export { OpenCodeExecutor } from "./opencode.js";
 export { OpenCodeGoExecutor } from "./opencode-go.js";

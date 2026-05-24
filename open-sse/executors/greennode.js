@@ -8,6 +8,12 @@ const ALLOWED_FIELDS = new Set([
   "tools", "tool_choice"
 ]);
 
+// These models reject max_tokens and require max_completion_tokens instead.
+// They also reject non-default temperature/top_p values.
+const MAX_COMPLETION_TOKENS_MODELS = new Set([
+  "openai/gpt-5",
+]);
+
 export class GreenNodeExecutor extends DefaultExecutor {
   constructor() {
     super("greennode");
@@ -28,8 +34,19 @@ export class GreenNodeExecutor extends DefaultExecutor {
       if (result[key] !== undefined) clean[key] = result[key];
     }
 
-    // 4. Fit the whole body (messages + tools + everything else) within the input limit.
-    //    We use JSON.stringify length as a worst-case token estimate (1 char ≈ 1 token).
+    // 4. Models that require max_completion_tokens also reject non-default
+    //    temperature/top_p values — strip those fields entirely.
+    if (MAX_COMPLETION_TOKENS_MODELS.has(model)) {
+      if (clean.max_tokens !== undefined) {
+        clean.max_completion_tokens = clean.max_tokens;
+        delete clean.max_tokens;
+      }
+      delete clean.temperature;
+      delete clean.top_p;
+    }
+
+    // 5. Fit the whole body (messages + tools + everything else) within the input limit.
+    //    JSON.stringify length is used as a worst-case token estimate (1 char ≈ 1 token).
     const inputLimit = (this.config?.maxInputTokens || 129024) - 1024; // 1024-char safety margin
     const system = (clean.messages || []).filter(m => m.role === "system");
     let conv = (clean.messages || []).filter(m => m.role !== "system");

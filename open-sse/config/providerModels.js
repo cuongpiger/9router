@@ -421,6 +421,9 @@ export const PROVIDER_MODELS = {
   ],
   greennode: [
     { id: "qwen/qwen3-vl-235b-a22b-instruct", name: "Qwen3-VL-235B-A22B-Instruct", contextLength: 129024 },
+    { id: "google/gemma-4-31b-it", name: "gemma-4-31b-it", contextLength: 129024 },
+    { id: "openai/gpt-oss-120b", name: "gpt-oss-120b", contextLength: 129024 },
+    { id: "openai/gpt-5", name: "gpt-5", contextLength: 129024 },
   ],
   byteplus: [
     { id: "seed-2-0-pro-260328", name: "Seed 2.0 Pro" },

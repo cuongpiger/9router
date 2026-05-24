@@ -6,25 +6,36 @@ import { getCachedClaudeHeaders } from "../utils/claudeHeaderCache.js";
 import { proxyAwareFetch } from "../utils/proxyFetch.js";
 import { injectReasoningContent } from "../utils/reasoningContentInjector.js";
 
-// Rough token estimate: serialize content to string, divide by 4 chars/token.
-// Conservative for code (which has more tokens per char than prose).
+// Worst-case token estimate: treat every character as one token.
+// Qwen tokenizes Chinese at ~1 char/token and code can be dense too;
+// using 1:1 guarantees we never exceed the provider's input limit.
 function estimateTokens(content) {
   if (!content) return 0;
-  if (typeof content === "string") return Math.ceil(content.length / 4);
+  if (typeof content === "string") return content.length;
   if (Array.isArray(content)) {
     return content.reduce((sum, part) => sum + estimateTokens(part.text || part.content || ""), 0);
   }
   return 0;
 }
 
+// Stringify content to a plain string for truncation purposes.
+function contentToString(content) {
+  if (!content) return "";
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) return content.map(p => p.text || p.content || "").join("");
+  return String(content);
+}
+
 // Trim oldest non-system messages until estimated input fits within maxInputTokens.
-// Always keeps system messages and at least the last message.
+// If the last message alone exceeds the budget, its content is hard-truncated so
+// the request is always accepted.
 function truncateMessages(messages, maxInputTokens) {
   const system = messages.filter(m => m.role === "system");
   const conv = messages.filter(m => m.role !== "system");
 
   const systemTokens = system.reduce((sum, m) => sum + estimateTokens(m.content), 0);
-  const budget = maxInputTokens - systemTokens - 256; // 256-token safety margin
+  // 1024-token safety margin to absorb tokenizer discrepancies
+  const budget = maxInputTokens - systemTokens - 1024;
 
   // Walk backwards from the end, keep as many messages as fit
   const kept = [];
@@ -34,6 +45,19 @@ function truncateMessages(messages, maxInputTokens) {
     if (used + t > budget && kept.length > 0) break;
     kept.unshift(conv[i]);
     used += t;
+  }
+
+  // Hard-truncate the first kept message if it alone blows the budget.
+  // This ensures total estimated tokens never exceeds the limit even when a
+  // single message is enormous.
+  if (kept.length > 0) {
+    const firstTokens = estimateTokens(kept[0].content);
+    const remainder = budget - (used - firstTokens);
+    if (firstTokens > remainder && remainder > 0) {
+      const maxChars = remainder; // 1 char = 1 token estimate, so chars == tokens
+      const raw = contentToString(kept[0].content);
+      kept[0] = { ...kept[0], content: raw.slice(0, maxChars) };
+    }
   }
 
   return [...system, ...kept];

@@ -118,7 +118,15 @@ export function createDisconnectAwareStream(transformStream, streamController) {
         reader.cancel().catch(() => {});
         writer.abort().catch(() => {});
         
-        if (!wasConnected || error.name === "AbortError" || error.message?.includes("aborted")) {
+        // Treat premature server-side termination (undici: "terminated", "ECONNRESET")
+        // as a graceful close rather than propagating controller.error(), which would
+        // cause Next.js to log "failed to pipe response" instead of ending the stream.
+        const isNetworkTermination = error.name === "TypeError" && (
+          error.message?.includes("terminated") ||
+          error.message?.includes("ECONNRESET") ||
+          error.message?.includes("ECONNABORTED")
+        );
+        if (!wasConnected || error.name === "AbortError" || error.message?.includes("aborted") || isNetworkTermination) {
           try {
             controller.close();
           } catch (e) {

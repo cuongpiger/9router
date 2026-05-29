@@ -1,5 +1,6 @@
 // Stream handler with disconnect detection - shared for all providers
 import { STREAM_STALL_TIMEOUT_MS } from "../config/runtimeConfig.js";
+import { dbg, isDebugEnabled } from "./debugLog.js";
 
 // Get HH:MM:SS timestamp
 function getTimeString() {
@@ -38,6 +39,7 @@ export function createStreamController({ onDisconnect, onError, log, provider, m
       disconnected = true;
 
       logStream(`disconnect: ${reason}`);
+      dbg("CTRL", `${provider}/${model} | disconnect=${reason} | dur=${Date.now() - startTime}ms`);
 
       // Delay abort to allow cleanup
       abortTimeout = setTimeout(() => {
@@ -117,16 +119,25 @@ export function createDisconnectAwareStream(transformStream, streamController) {
         streamController.handleError(error);
         reader.cancel().catch(() => {});
         writer.abort().catch(() => {});
-        
-        // Treat premature server-side termination (undici: "terminated", "ECONNRESET")
-        // as a graceful close rather than propagating controller.error(), which would
-        // cause Next.js to log "failed to pipe response" instead of ending the stream.
-        const isNetworkTermination = error.name === "TypeError" && (
-          error.message?.includes("terminated") ||
-          error.message?.includes("ECONNRESET") ||
-          error.message?.includes("ECONNABORTED")
-        );
-        if (!wasConnected || error.name === "AbortError" || error.message?.includes("aborted") || isNetworkTermination) {
+
+        // Treat network resets / premature server-side termination / abort as graceful close
+        const msg = error?.message || "";
+        const code = error?.code || error?.cause?.code || "";
+        const isNetworkClose =
+          error.name === "AbortError" ||
+          msg.includes("aborted") ||
+          msg.includes("terminated") ||
+          msg.includes("socket hang up") ||
+          msg.includes("ECONNRESET") ||
+          msg.includes("ECONNABORTED") ||
+          msg.includes("ETIMEDOUT") ||
+          msg.includes("EPIPE") ||
+          code === "ECONNRESET" ||
+          code === "ETIMEDOUT" ||
+          code === "EPIPE" ||
+          code === "UND_ERR_SOCKET";
+
+        if (!wasConnected || isNetworkClose) {
           try {
             controller.close();
           } catch (e) {
@@ -166,6 +177,11 @@ export function createDisconnectAwareStream(transformStream, streamController) {
  */
 export function pipeWithDisconnect(providerResponse, transformStream, streamController) {
   let stallTimer = null;
+  let chunkCount = 0;
+  let totalBytes = 0;
+  let lastChunkAt = Date.now();
+  const t0 = Date.now();
+  const tag = "STREAM";
   const clearStall = () => {
     if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
   };
@@ -173,6 +189,7 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
     clearStall();
     stallTimer = setTimeout(() => {
       stallTimer = null;
+      dbg(tag, `STALL TIMEOUT ${STREAM_STALL_TIMEOUT_MS}ms | chunks=${chunkCount} | bytes=${totalBytes} | sinceLast=${Date.now() - lastChunkAt}ms`);
       streamController.handleError?.(new Error("stream stall timeout"));
       streamController.abort?.();
     }, STREAM_STALL_TIMEOUT_MS);
@@ -185,20 +202,30 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
     signal: streamController.signal,
     startTime: streamController.startTime,
     isConnected: () => streamController.isConnected(),
-    handleComplete: () => { clearStall(); streamController.handleComplete(); },
-    handleError: (e) => { clearStall(); streamController.handleError(e); },
-    handleDisconnect: (r) => { clearStall(); streamController.handleDisconnect(r); },
+    handleComplete: () => { dbg(tag, `complete | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); streamController.handleComplete(); },
+    handleError: (e) => { dbg(tag, `error: ${e?.message} | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); streamController.handleError(e); },
+    handleDisconnect: (r) => { dbg(tag, `disconnect: ${r} | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); streamController.handleDisconnect(r); },
     abort: () => { clearStall(); streamController.abort(); }
   };
 
   armStall();
+  dbg(tag, `pipe start | stallTimeout=${STREAM_STALL_TIMEOUT_MS}ms`);
 
   const upstreamTap = new TransformStream({
     transform(chunk, controller) {
+      chunkCount++;
+      const sz = chunk?.byteLength || chunk?.length || 0;
+      totalBytes += sz;
+      const now = Date.now();
+      const gap = now - lastChunkAt;
+      lastChunkAt = now;
+      if (isDebugEnabled && (chunkCount <= 5 || chunkCount % 20 === 0 || gap > 5000)) {
+        dbg(tag, `chunk #${chunkCount} | size=${sz}B | gap=${gap}ms | total=${totalBytes}B`);
+      }
       armStall();
       controller.enqueue(chunk);
     },
-    flush() { clearStall(); }
+    flush() { dbg(tag, `upstream EOF | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); }
   });
 
   const transformedBody = providerResponse.body

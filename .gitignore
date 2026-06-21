@@ -75,3 +75,6 @@ gitbook/README.md
 
 .claude
 .vscode
+
+# Refactor backup reference (do not bundle/lint)
+open-sse.old/

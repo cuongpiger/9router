@@ -35,9 +35,11 @@ describe("GreenNode provider config", () => {
     expect(p.format).toBe("openai");
   });
 
-  it("has an endpoint entry in PROVIDER_ENDPOINTS", async () => {
-    const { PROVIDER_ENDPOINTS } = await import("@/shared/constants/config.js");
-    expect(PROVIDER_ENDPOINTS["greennode"]).toBe(
+  // Upstream migrated the per-provider endpoint map (PROVIDER_ENDPOINTS) into the
+  // provider registry; PROVIDERS[id].baseUrl is now the single source of truth.
+  it("exposes its endpoint via PROVIDERS[id].baseUrl", async () => {
+    const { PROVIDERS } = await import("open-sse/config/providers.js");
+    expect(PROVIDERS["greennode"].baseUrl).toBe(
       "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1/chat/completions"
     );
   });

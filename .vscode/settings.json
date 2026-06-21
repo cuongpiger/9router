@@ -16,5 +16,17 @@
     "javascript:S3776": {
       "level": "off"
     }
-  }
+},
+"files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+},
+"hide-files.files": []
 }

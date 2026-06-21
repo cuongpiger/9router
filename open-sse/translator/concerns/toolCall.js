@@ -38,9 +38,19 @@ export function ensureToolCallIds(body) {
         if (!tc.type) {
           tc.type = "function";
         }
-        // Ensure arguments is JSON string, not object
-        if (tc.function?.arguments && typeof tc.function.arguments !== "string") {
-          tc.function.arguments = JSON.stringify(tc.function.arguments);
+        // Ensure arguments is a non-empty JSON string. Missing/undefined/null/""
+        // arguments (no-parameter tool calls, or OpenAI-format history replays)
+        // must become "{}": JSON.stringify drops keys whose value is undefined,
+        // so an absent `arguments` reaches Jinja-templated backends (e.g.
+        // GreenNode) as Undefined and 500s with "Object of type Undefined is
+        // not JSON serializable".
+        if (tc.function) {
+          const args = tc.function.arguments;
+          if (args === undefined || args === null || args === "") {
+            tc.function.arguments = "{}";
+          } else if (typeof args !== "string") {
+            tc.function.arguments = JSON.stringify(args);
+          }
         }
       }
     }

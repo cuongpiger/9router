@@ -72,3 +72,9 @@ ecosystem.config.*
 scripts/agSniffer/*
 gitbooks/*
 gitbook/README.md
+
+.claude
+.vscode
+
+# Refactor backup reference (do not bundle/lint)
+open-sse.old/
